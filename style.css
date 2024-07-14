@@ -95,6 +95,13 @@ footer {
     flex-shrink: 0;
 }
 
+/* Tambahkan ini di akhir file style.css */
+.total-row {
+    font-weight: bold;
+    background-color: #f0f0f0; /* Warna abu-abu muda */
+}
+
+
 @media (max-width: 600px) {
     .container, .container-wide {
         margin: 20px;

@@ -3,24 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strava Authorization</title>
+    <title>Strava Authorization for Healthful WSC 2024</title>
     <link id="stylesheet" rel="stylesheet" href="style.css">
+    <script type="module" src="script.js"></script>
 </head>
 <body>
     <div class="container" id="reportContent">
-        <h1>Strava Authorization</h1>
+        <h1>Strava Authorization for Healthful WSC 2024</h1>
         <p>Please click the button below to authorize this application with your Strava account.</p>
         <div class="button-container">
             <button id="authorizeButton">Authorize with Strava</button>
         </div>
         
         <div id="summary" style="display:none;">
-            <h2>Activity Summary</h2>
-            <p>Athlete Name: <span id="athleteName"></span></p>
-            <p>City: <span id="athleteCity"></span></p>
-            <p>Start Date: <span id="startDateDisplay"></span></p>
-            <p>End Date: <span id="endDateDisplay"></span></p>
-            <p>Total Days: <span id="totalDays"></span></p>
+            <p><b>Athlete Name:</b> <span id="athleteName"></span></p>
+            <p><b>City:</b> <span id="athleteCity"></span></p>
+            <h2>Healthful WSC 2024: Activity Summary</h2>
+            <p><b>Start Date:</b> <span id="startDateDisplay"></span></p>
+            <p><b>End Date:</b> <span id="endDateDisplay"></span></p>
+            <p><b>Total Activity:</b> <span id="totalDays"></span> days</p>
             <table id="activitySummaryTable">
                 <thead>
                     <tr>
@@ -41,7 +42,7 @@
         </div>
 
         <div id="healthfulRecap" style="display:none;">
-            <h2>Healthful WSC Recap</h2>
+            <h2>Points Collected</h2>
             <table id="healthfulRecapTable">
                 <thead>
                     <tr>
@@ -62,6 +63,7 @@
         </div>
 
         <div id="activities" style="display:none;">
+            <p align="center">------------------------------------------------------------------------</p>
             <h2>Activity Details</h2>
             <div id="monthlyActivities">
                 <!-- Monthly activities tables will be inserted here -->
@@ -74,286 +76,5 @@
     <footer>
         <p>&copy; 2024 Strava Integration Example. All rights reserved.</p>
     </footer>
-    
-    <script>
-        const clientId = '130095';
-        const clientSecret = '1cab1c47c485d4c5f65d519315953bd531ba55e7';
-        const redirectUri = 'https://healthful-wsc.web.app/';
-        const startDate = '2023-01-01T00:00:00Z';
-        const endDate = '2024-06-30T23:59:59Z';
-
-        document.getElementById('authorizeButton').addEventListener('click', () => {
-            window.location.href = `http://www.strava.com/oauth/authorize?client_id=${clientId}&response_type=code&redirect_uri=${redirectUri}&approval_prompt=force&scope=activity:read_all`;
-        });
-
-        async function getToken(code) {
-            const response = await fetch('https://www.strava.com/oauth/token', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({
-                    client_id: clientId,
-                    client_secret: clientSecret,
-                    code: code,
-                    grant_type: 'authorization_code',
-                    redirect_uri: redirectUri
-                })
-            });
-            return response.json();
-        }
-
-        async function getAthlete(accessToken) {
-            const response = await fetch('https://www.strava.com/api/v3/athlete', {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-            });
-            return response.json();
-        }
-
-        async function getActivities(accessToken) {
-            const response = await fetch('https://www.strava.com/api/v3/athlete/activities?after=' + new Date(startDate).getTime() / 1000 + '&before=' + new Date(endDate).getTime() / 1000, {
-                headers: { 'Authorization': 'Bearer ' + accessToken }
-            });
-            return response.json();
-        }
-
-        function displaySummary(activities) {
-            const summaryTableBody = document.querySelector('#activitySummaryTable tbody');
-            const summaryTableFooter = document.querySelector('#activitySummaryTable tfoot');
-            const activityTypes = {};
-
-            let totalActivities = 0;
-            let totalDistance = 0;
-            let totalDuration = 0;
-            let totalHeartRates = [];
-            
-            activities.forEach(activity => {
-                const type = activity.type;
-                const distance = activity.distance / 1000;
-                const duration = activity.moving_time / 60;
-                const heartRate = activity.average_heartrate || 0;
-
-                if (!activityTypes[type]) {
-                    activityTypes[type] = {
-                        count: 0,
-                        totalDistance: 0,
-                        totalDuration: 0,
-                        heartRates: []
-                    };
-                }
-
-                activityTypes[type].count += 1;
-                activityTypes[type].totalDistance += distance;
-                activityTypes[type].totalDuration += duration;
-                if (heartRate > 0) {
-                    activityTypes[type].heartRates.push(heartRate);
-                }
-            });
-
-            for (const type in activityTypes) {
-                const avgHeartRate = activityTypes[type].heartRates.length > 0
-                    ? (activityTypes[type].heartRates.reduce((a, b) => a + b, 0) / activityTypes[type].heartRates.length).toFixed(2)
-                    : 'N/A';
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${type}</td>
-                    <td>${activityTypes[type].count}</td>
-                    <td>${activityTypes[type].totalDistance.toFixed(2) === '0.00' ? '-' : activityTypes[type].totalDistance.toFixed(2)}</td>
-                    <td>${activityTypes[type].totalDuration.toFixed(2) === '0.00' ? '-' : activityTypes[type].totalDuration.toFixed(2)}</td>
-                    <td>${avgHeartRate}</td>
-                `;
-                summaryTableBody.appendChild(row);
-
-                totalActivities += activityTypes[type].count;
-                totalDistance += activityTypes[type].totalDistance;
-                totalDuration += activityTypes[type].totalDuration;
-                totalHeartRates = totalHeartRates.concat(activityTypes[type].heartRates);
-            }
-
-            const avgTotalHeartRate = totalHeartRates.length > 0
-                ? (totalHeartRates.reduce((a, b) => a + b, 0) / totalHeartRates.length).toFixed(2)
-                : 'N/A';
-            const totalRow = document.createElement('tr');
-            totalRow.innerHTML = `
-                <td><strong>Total</strong></td>
-                <td>${totalActivities}</td>
-                <td>${totalDistance.toFixed(2) === '0.00' ? '-' : totalDistance.toFixed(2)}</td>
-                <td>${totalDuration.toFixed(2) === '0.00' ? '-' : totalDuration.toFixed(2)}</td>
-                <td>${avgTotalHeartRate}</td>
-            `;
-            summaryTableFooter.appendChild(totalRow);
-        }
-
-        function getMonthName(month) {
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            return monthNames[month];
-        }
-
-        function displayHealthfulRecap(activities) {
-            const healthfulRecapTableBody = document.querySelector('#healthfulRecapTable tbody');
-            const healthfulRecapTableFooter = document.querySelector('#healthfulRecapTable tfoot');
-            const monthlyData = {};
-
-            let totalWalkRunDistance = 0;
-            let totalRideDistance = 0;
-            let totalOtherSportDuration = 0;
-            let totalPoints = 0;
-
-            activities.forEach(activity => {
-                const date = new Date(activity.start_date_local);
-                const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                const type = activity.type;
-                const distance = activity.distance / 1000;
-                const duration = activity.moving_time / 60;
-
-                if (!monthlyData[monthYear]) {
-                    monthlyData[monthYear] = {
-                        walkRunDistance: 0,
-                        rideDistance: 0,
-                        otherSportDuration: 0,
-                        points: 0
-                    };
-                }
-
-                if (type === 'Walk' || type === 'Run') {
-                    monthlyData[monthYear].walkRunDistance += distance;
-                    monthlyData[monthYear].points += distance * 800;
-                } else if (type === 'Ride') {
-                    monthlyData[monthYear].rideDistance += distance;
-                    monthlyData[monthYear].points += distance * 200;
-                } else {
-                    monthlyData[monthYear].otherSportDuration += duration;
-                    monthlyData[monthYear].points += duration * 67;
-                }
-            });
-
-            const sortedMonths = Object.keys(monthlyData).sort((a, b) => new Date(b) - new Date(a));
-
-            for (const monthYear of sortedMonths) {
-                const [year, month] = monthYear.split('-');
-                const monthName = getMonthName(parseInt(month) - 1);
-                const data = monthlyData[monthYear];
-                if (data.walkRunDistance > 0 || data.rideDistance > 0 || data.otherSportDuration > 0) {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${year} ${monthName}</td>
-                        <td>${data.walkRunDistance.toFixed(2) === '0.00' ? '-' : data.walkRunDistance.toFixed(2)}</td>
-                        <td>${data.rideDistance.toFixed(2) === '0.00' ? '-' : data.rideDistance.toFixed(2)}</td>
-                        <td>${data.otherSportDuration.toFixed(2) === '0.00' ? '-' : data.otherSportDuration.toFixed(2)}</td>
-                        <td>${data.points.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                    `;
-                    healthfulRecapTableBody.appendChild(row);
-
-                    totalWalkRunDistance += data.walkRunDistance;
-                    totalRideDistance += data.rideDistance;
-                    totalOtherSportDuration += data.otherSportDuration;
-                    totalPoints += data.points;
-                }
-            }
-
-            const totalRow = document.createElement('tr');
-            totalRow.innerHTML = `
-                <td><strong>Total</strong></td>
-                <td>${totalWalkRunDistance.toFixed(2)}</td>
-                <td>${totalRideDistance.toFixed(2)}</td>
-                <td>${totalOtherSportDuration.toFixed(2)}</td>
-                <td>${totalPoints.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-            `;
-            healthfulRecapTableFooter.appendChild(totalRow);
-        }
-
-        function displayMonthlyActivities(monthYear, activities) {
-            const tableContainer = document.getElementById('monthlyActivities');
-
-            const [year, month] = monthYear.split('-');
-            const monthName = getMonthName(parseInt(month) - 1);
-
-            const table = document.createElement('table');
-            table.innerHTML = `
-                <thead>
-                    <tr>
-                        <th>Activity Date</th>
-                        <th>Sport Type</th>
-                        <th>Total Distance (km)</th>
-                        <th>Total Duration (minutes)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${activities.map(activity => `
-                        <tr>
-                            <td>${activity.date}</td>
-                            <td>${activity.type}</td>
-                            <td>${activity.distance === '-' ? '-' : parseFloat(activity.distance).toFixed(2)}</td>
-                            <td>${parseFloat(activity.duration).toFixed(2)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            `;
-            const header = document.createElement('h3');
-            header.textContent = `Period: ${monthName} ${year}`;
-            tableContainer.appendChild(header);
-            tableContainer.appendChild(table);
-        }
-
-        function displayActivities(activities) {
-            const monthlyActivities = {};
-
-            activities.forEach(activity => {
-                const date = new Date(activity.start_date_local);
-                const monthYear = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
-                const type = activity.type;
-                const distance = activity.distance / 1000;
-                const duration = activity.moving_time / 60;
-
-                if (!monthlyActivities[monthYear]) {
-                    monthlyActivities[monthYear] = [];
-                }
-
-                monthlyActivities[monthYear].push({
-                    date: date.toISOString().split('T')[0] + ' ' + date.toISOString().split('T')[1].split('.')[0],
-                    type: type,
-                    distance: distance === 0 ? '-' : distance.toFixed(2),
-                    duration: duration.toFixed(2)
-                });
-            });
-
-            const sortedMonths = Object.keys(monthlyActivities).sort((a, b) => new Date(b) - new Date(a));
-
-            for (const monthYear of sortedMonths) {
-                displayMonthlyActivities(monthYear, monthlyActivities[monthYear]);
-            }
-        }
-
-        (async function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            if (code) {
-                const tokenData = await getToken(code);
-                if (tokenData.access_token) {
-                    document.getElementById('authorizeButton').style.display = 'none';
-                    document.querySelector('p').style.display = 'none';
-                    const athlete = await getAthlete(tokenData.access_token);
-                    document.getElementById('athleteName').textContent = athlete.firstname + ' ' + athlete.lastname;
-                    document.getElementById('athleteCity').textContent = athlete.city;
-                    document.getElementById('startDateDisplay').textContent = new Date(startDate).toISOString().split('T')[0];
-                    document.getElementById('endDateDisplay').textContent = new Date(endDate).toISOString().split('T')[0];
-                    const totalDays = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
-                    document.getElementById('totalDays').textContent = totalDays;
-                    const activities = await getActivities(tokenData.access_token);
-                    if (activities.length > 0) {
-                        displaySummary(activities);
-                        displayHealthfulRecap(activities);
-                        displayActivities(activities);
-                        document.getElementById('summary').style.display = 'block';
-                        document.getElementById('healthfulRecap').style.display = 'block';
-                        document.getElementById('activities').style.display = 'block';
-                        document.getElementById('reportContent').classList.add('container-wide');
-                    } else {
-                        alert('No activities found within the specified date range.');
-                    }
-                } else {
-                    alert('Failed to obtain access token.');
-                }
-            }
-        })();
-    </script>
 </body>
 </html>
